@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Spese - Spese</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- CSS Personalizzato -->
+    <link rel="stylesheet" href="/gestione-spese-2-v2/style.css">
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+    <!-- Configurazione Firebase -->
+    <script>
+        var firebaseConfig = {
+            apiKey: "AIzaSyA6usjd2E5ytJz8Mx9SqjQXGXPgnOAeqYw",
+            authDomain: "gestione-spese-2-5db43.firebaseapp.com",
+            projectId: "gestione-spese-2-5db43",
+            storageBucket: "gestione-spese-2-5db43.appspot.com",
+            messagingSenderId: "583349146945",
+            appId: "1:583349146945:web:af0989d9c1889b1ef77dc0"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        document.addEventListener('DOMContentLoaded', function() {
+            displayExpenses();
+        });
+
+        function displayExpenses() {
+            const expenseList = document.getElementById('expenseList');
+
+            db.collection("expenses").orderBy("date", "desc").onSnapshot((querySnapshot) => {
+                if (expenseList) {
+                    expenseList.innerHTML = '';
+                }
+
+                querySnapshot.forEach((doc) => {
+                    const expense = doc.data();
+                    const card = document.createElement('div');
+                    card.className = 'card mb-3';
+                    const dateColor = getDateColor(expense.date);
+                    card.style.backgroundColor = dateColor; // Applica il colore di sfondo alla card
+                    card.innerHTML = `
+                        <div class="card-body">
+                            <h5 class="card-title">${expense.description}</h5>
+                            <span class="badge">${formatDate(expense.date)}</span>
+                            <p class="card-text mt-2"><strong>Totale:</strong> €${parseFloat(expense.totalAmount).toFixed(2)}</p>
+                            <p class="card-text"><strong>Jack ha messo:</strong> €${parseFloat(expense.jackAmount).toFixed(2)}</p>
+                            <p class="card-text"><strong>Ste ha messo:</strong> €${parseFloat(expense.steAmount).toFixed(2)}</p>
+                            <p class="card-text"><strong>Jack deve:</strong> €${parseFloat(expense.jackShare).toFixed(2)}</p>
+                            <p class="card-text"><strong>Ste deve:</strong> €${parseFloat(expense.steShare).toFixed(2)}</p>
+                            <button class="btn btn-danger btn-sm mt-2" onclick="confirmDeleteExpense('${doc.id}')"><i class="fas fa-trash"></i> Elimina</button>
+                        </div>
+                    `;
+                    if (expenseList) {
+                        expenseList.appendChild(card);
+                    }
+                });
+            });
+        }
+
+        function confirmDeleteExpense(id) {
+            if (confirm("Sei sicuro di voler eliminare questa spesa?")) {
+                deleteExpense(id);
+            }
+        }
+
+        function deleteExpense(id) {
+            db.collection("expenses").doc(id).delete()
+                .then(() => {
+                    displayExpenses();
+                })
+                .catch((error) => {
+                    console.error("Errore nell'eliminare la spesa: ", error);
+                });
+        }
+
+        function formatDate(dateString) {
+            const options = { year: 'numeric', month: '2-digit', day: '2-digit' };
+            const date = new Date(dateString);
+            return date.toLocaleDateString('it-IT', options);
+        }
+
+        function getDateColor(dateString) {
+            // Assegna un colore in base al giorno della settimana
+            const date = new Date(dateString);
+            const day = date.getDay();
+            const colors = [
+                "rgba(255, 205, 210, 0.8)", // Lunedì
+                "rgba(225, 190, 231, 0.8)", // Martedì
+                "rgba(187, 222, 251, 0.8)", // Mercoledì
+                "rgba(200, 230, 201, 0.8)", // Giovedì
+                "rgba(255, 236, 179, 0.8)", // Venerdì
+                "rgba(255, 171, 145, 0.8)", // Sabato
+                "rgba(209, 196, 233, 0.8)"  // Domenica
+            ];
+            return colors[day]; // Ritorna un colore diverso per ogni giorno della settimana
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h2 class="my-4">Elenco Spese</h2>
+        <div id="expenseList"></div>
+    </div>
+
+    <!-- Barra di navigazione -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-bottom">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/gestione-spese-2-v2/index.html">Home</a>
+            <a class="navbar-brand" href="/gestione-spese-2-v2/add-expense.html">+</a>
+            <a class="navbar-brand" href="/gestione-spese-2-v2/expenses.html">Spese</a>
+        </div>
+    </nav>
+</body>
+</html>
