@@ -81,7 +81,7 @@
                 });
 
                 // Verifica se il grafico esiste già e distruggilo prima di crearne uno nuovo
-                if (window.myChart) {
+                if (window.myChart && typeof window.myChart.destroy === 'function') {
                     window.myChart.destroy();
                 }
 
