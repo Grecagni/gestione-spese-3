@@ -41,11 +41,16 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
+
+        // Aggiungi un log per confermare la connessione
+        db.collection('test').get()
+            .then(() => console.log('Firebase è connesso correttamente.'))
+            .catch(error => console.error('Errore nella connessione a Firebase:', error));
     </script>
 
     <!-- Codice React -->
     <script type="text/babel">
-        function ExpenseCard({ title, date, total, contributors }) {
+        function ExpenseCard({ title, date, total, contributors, debts, onDelete }) {
             return (
                 <div className="bg-white p-4 rounded-lg shadow-md my-4 border-l-4 border-blue-500 custom-card">
                     <h2 className="text-2xl font-bold text-blue-600">{title}</h2>
@@ -56,55 +61,61 @@
                             <li key={index} className="text-gray-700">{contributor.name} ha messo: <span className="font-semibold">€{contributor.amount}</span></li>
                         ))}
                     </ul>
-                    <button className="bg-red-500 text-white py-1 px-3 rounded hover:bg-red-700 custom-button">Elimina</button>
+                    <ul className="list-disc list-inside mb-2">
+                        {debts.map((debt, index) => (
+                            <li key={index} className="text-gray-700">{debt.name} deve: <span className="font-semibold">€{debt.amount}</span></li>
+                        ))}
+                    </ul>
+                    <button 
+                        className="bg-red-500 text-white py-1 px-3 rounded hover:bg-red-700 custom-button"
+                        onClick={onDelete}
+                    >
+                        Elimina
+                    </button>
                 </div>
             );
         }
 
         function AddExpenseForm({ onAddExpense }) {
             const [title, setTitle] = React.useState('');
-            const [date, setDate] = React.useState('');
-            const [jackAmount, setJackAmount] = React.useState(0);
-            const [steAmount, setSteAmount] = React.useState(0);
+            const [date, setDate] = React.useState(new Date().toISOString().substr(0, 10)); // Data di default al giorno corrente
             const [total, setTotal] = React.useState(0);
             const [splitMethod, setSplitMethod] = React.useState('equo'); // 'equo' o 'personalizzato'
+            const [jackAmount, setJackAmount] = React.useState(0);
+            const [steAmount, setSteAmount] = React.useState(0);
             const [error, setError] = React.useState('');
 
             const handleSubmit = (event) => {
                 event.preventDefault();
-                
-                let totalAmount;
+
+                const debts = [];
                 if (splitMethod === 'equo') {
-                    totalAmount = parseFloat(total);
-                    const perPerson = totalAmount / 2;
-                    setJackAmount(perPerson);
-                    setSteAmount(perPerson);
+                    const perPerson = parseFloat(total) / 2;
+                    debts.push({ name: 'Jack', amount: perPerson - parseFloat(jackAmount) });
+                    debts.push({ name: 'Ste', amount: perPerson - parseFloat(steAmount) });
                 } else {
-                    totalAmount = parseFloat(jackAmount) + parseFloat(steAmount);
+                    debts.push({ name: 'Jack', amount: (parseFloat(total) / 2) - parseFloat(jackAmount) });
+                    debts.push({ name: 'Ste', amount: (parseFloat(total) / 2) - parseFloat(steAmount) });
                 }
 
-                if (totalAmount !== parseFloat(total)) {
-                    setError('La somma di Jack e Ste deve essere uguale al totale.');
-                    return;
-                }
-
-                setError('');
                 const newExpense = {
                     title,
                     date,
-                    total: totalAmount,
+                    total: parseFloat(total),
                     contributors: [
                         { name: 'Jack', amount: parseFloat(jackAmount) },
                         { name: 'Ste', amount: parseFloat(steAmount) },
                     ],
+                    debts,
                 };
 
                 onAddExpense(newExpense);
                 setTitle('');
-                setDate('');
+                setDate(new Date().toISOString().substr(0, 10));
+                setTotal(0);
                 setJackAmount(0);
                 setSteAmount(0);
-                setTotal(0);
+                setSplitMethod('equo');
             };
 
             return (
@@ -132,6 +143,16 @@
                         />
                     </div>
                     <div className="mb-4">
+                        <label className="block text-gray-700">Totale</label>
+                        <input 
+                            type="number" 
+                            className="mt-1 p-2 w-full border rounded"
+                            value={total}
+                            onChange={(e) => setTotal(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <div className="mb-4">
                         <label className="block text-gray-700">Metodo di suddivisione</label>
                         <select 
                             className="mt-1 p-2 w-full border rounded"
@@ -142,37 +163,23 @@
                             <option value="personalizzato">Personalizzato</option>
                         </select>
                     </div>
-                    {splitMethod === 'personalizzato' && (
-                        <>
-                            <div className="mb-4">
-                                <label className="block text-gray-700">Jack ha messo</label>
-                                <input 
-                                    type="number" 
-                                    className="mt-1 p-2 w-full border rounded"
-                                    value={jackAmount}
-                                    onChange={(e) => setJackAmount(e.target.value)}
-                                    required
-                                />
-                            </div>
-                            <div className="mb-4">
-                                <label className="block text-gray-700">Ste ha messo</label>
-                                <input 
-                                    type="number" 
-                                    className="mt-1 p-2 w-full border rounded"
-                                    value={steAmount}
-                                    onChange={(e) => setSteAmount(e.target.value)}
-                                    required
-                                />
-                            </div>
-                        </>
-                    )}
                     <div className="mb-4">
-                        <label className="block text-gray-700">Totale</label>
+                        <label className="block text-gray-700">Jack ha messo</label>
                         <input 
                             type="number" 
                             className="mt-1 p-2 w-full border rounded"
-                            value={total}
-                            onChange={(e) => setTotal(e.target.value)}
+                            value={jackAmount}
+                            onChange={(e) => setJackAmount(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label className="block text-gray-700">Ste ha messo</label>
+                        <input 
+                            type="number" 
+                            className="mt-1 p-2 w-full border rounded"
+                            value={steAmount}
+                            onChange={(e) => setSteAmount(e.target.value)}
                             required
                         />
                     </div>
@@ -186,25 +193,90 @@
             );
         }
 
-        function ExpenseHistory({ expenses }) {
+        function ExpenseHistory({ expenses, onDeleteExpense }) {
+            const [viewMode, setViewMode] = React.useState('card'); // 'card' o 'table'
+
+            const handleDelete = (id) => {
+                db.collection('expenses').doc(id).delete()
+                    .then(() => onDeleteExpense(id))
+                    .catch(error => console.error('Errore nella rimozione della spesa:', error));
+            };
+
             return (
                 <div className="bg-white p-4 rounded-lg shadow-md mb-6">
                     <h2 className="text-2xl font-bold text-blue-600 mb-4">Storico delle Spese</h2>
+                    <div className="mb-4">
+                        <button 
+                            className={`px-4 py-2 rounded ${viewMode === 'card' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                            onClick={() => setViewMode('card')}
+                        >
+                            Vista Card
+                        </button>
+                        <button 
+                            className={`ml-2 px-4 py-2 rounded ${viewMode === 'table' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                            onClick={() => setViewMode('table')}
+                        >
+                            Vista Tabella
+                        </button>
+                    </div>
                     {expenses.length === 0 && <p className="text-gray-500">Nessuna spesa registrata.</p>}
-                    {expenses.map((expense, index) => (
-                        <ExpenseCard
-                            key={index}
-                            title={expense.title}
-                            date={expense.date}
-                            total={expense.total}
-                            contributors={expense.contributors}
-                        />
-                    ))}
+                    {viewMode === 'card' && (
+                        <div>
+                            {expenses.map((expense, index) => (
+                                <ExpenseCard
+                                    key={index}
+                                    title={expense.title}
+                                    date={expense.date}
+                                    total={expense.total}
+                                    contributors={expense.contributors}
+                                    debts={expense.debts}
+                                    onDelete={() => handleDelete(expense.id)}
+                                />
+                            ))}
+                        </div>
+                    )}
+                    {viewMode === 'table' && (
+                        <table className="min-w-full bg-white border-collapse">
+                            <thead>
+                                <tr>
+                                    <th className="px-4 py-2 border">Titolo</th>
+                                    <th className="px-4 py-2 border">Data</th>
+                                    <th className="px-4 py-2 border">Totale</th>
+                                    <th className="px-4 py-2 border">Jack ha messo</th>
+                                    <th className="px-4 py-2 border">Ste ha messo</th>
+                                    <th className="px-4 py-2 border">Jack deve</th>
+                                    <th className="px-4 py-2 border">Ste deve</th>
+                                    <th className="px-4 py-2 border">Azione</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {expenses.map((expense, index) => (
+                                    <tr key={index}>
+                                        <td className="px-4 py-2 border">{expense.title}</td>
+                                        <td className="px-4 py-2 border">{expense.date}</td>
+                                        <td className="px-4 py-2 border">€{expense.total}</td>
+                                        <td className="px-4 py-2 border">€{expense.contributors.find(c => c.name === 'Jack').amount}</td>
+                                        <td className="px-4 py-2 border">€{expense.contributors.find(c => c.name === 'Ste').amount}</td>
+                                        <td className="px-4 py-2 border">€{expense.debts.find(d => d.name === 'Jack').amount}</td>
+                                        <td className="px-4 py-2 border">€{expense.debts.find(d => d.name === 'Ste').amount}</td>
+                                        <td className="px-4 py-2 border">
+                                            <button 
+                                                className="bg-red-500 text-white py-1 px-3 rounded hover:bg-red-700"
+                                                onClick={() => handleDelete(expense.id)}
+                                            >
+                                                Elimina
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
             );
         }
 
-        function AuthForm({ onLogin, onRegister }) {
+        function AuthForm({ onLogin }) {
             const [email, setEmail] = React.useState('');
             const [password, setPassword] = React.useState('');
             const [error, setError] = React.useState('');
@@ -220,20 +292,9 @@
                     });
             };
 
-            const handleRegister = (event) => {
-                event.preventDefault();
-                auth.createUserWithEmailAndPassword(email, password)
-                    .then(userCredential => {
-                        onRegister(userCredential.user);
-                    })
-                    .catch(error => {
-                        setError(error.message);
-                    });
-            };
-
             return (
                 <div className="bg-white p-4 rounded-lg shadow-md mb-6">
-                    <h2 className="text-2xl font-bold text-blue-600 mb-4">Accedi o Registrati</h2>
+                    <h2 className="text-2xl font-bold text-blue-600 mb-4">Accedi</h2>
                     {error && <p className="text-red-500 mb-4">{error}</p>}
                     <form onSubmit={handleLogin}>
                         <div className="mb-4">
@@ -263,13 +324,6 @@
                             >
                                 Accedi
                             </button>
-                            <button 
-                                type="button" 
-                                className="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-700"
-                                onClick={handleRegister}
-                            >
-                                Registrati
-                            </button>
                         </div>
                     </form>
                 </div>
@@ -284,7 +338,10 @@
                 if (user) {
                     const unsubscribe = db.collection('expenses').where('userId', '==', user.uid)
                         .onSnapshot(snapshot => {
-                            const fetchedExpenses = snapshot.docs.map(doc => doc.data());
+                            const fetchedExpenses = snapshot.docs.map(doc => ({
+                                id: doc.id,
+                                ...doc.data(),
+                            }));
                             setExpenses(fetchedExpenses);
                         });
                     return () => unsubscribe();
@@ -299,8 +356,12 @@
                 });
             };
 
+            const deleteExpense = (id) => {
+                setExpenses(expenses.filter(expense => expense.id !== id));
+            };
+
             if (!user) {
-                return <AuthForm onLogin={setUser} onRegister={setUser} />;
+                return <AuthForm onLogin={setUser} />;
             }
 
             return (
@@ -313,7 +374,7 @@
                         Logout
                     </button>
                     <AddExpenseForm onAddExpense={addExpense} />
-                    <ExpenseHistory expenses={expenses} />
+                    <ExpenseHistory expenses={expenses} onDeleteExpense={deleteExpense} />
                 </div>
             );
         }
