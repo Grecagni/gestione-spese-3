@@ -80,13 +80,25 @@
             const [title, setTitle] = React.useState('');
             const [date, setDate] = React.useState(new Date().toISOString().substr(0, 10)); // Data di default al giorno corrente
             const [total, setTotal] = React.useState(0);
-            const [splitMethod, setSplitMethod] = React.useState('equo'); // 'equo' o 'personalizzato'
             const [jackAmount, setJackAmount] = React.useState(0);
             const [steAmount, setSteAmount] = React.useState(0);
+            const [jackDue, setJackDue] = React.useState(0);
+            const [steDue, setSteDue] = React.useState(0);
+            const [splitMethod, setSplitMethod] = React.useState('equo'); // 'equo' o 'personalizzato'
             const [error, setError] = React.useState('');
 
             const handleSubmit = (event) => {
                 event.preventDefault();
+
+                if (parseFloat(jackAmount) + parseFloat(steAmount) !== parseFloat(total)) {
+                    setError('La somma messa da Jack e Ste deve essere uguale al totale.');
+                    return;
+                }
+
+                if (splitMethod === 'personalizzato' && (parseFloat(jackDue) + parseFloat(steDue) !== parseFloat(total))) {
+                    setError('La somma dovuta da Jack e Ste deve essere uguale al totale.');
+                    return;
+                }
 
                 const debts = [];
                 if (splitMethod === 'equo') {
@@ -94,8 +106,8 @@
                     debts.push({ name: 'Jack', amount: perPerson - parseFloat(jackAmount) });
                     debts.push({ name: 'Ste', amount: perPerson - parseFloat(steAmount) });
                 } else {
-                    debts.push({ name: 'Jack', amount: (parseFloat(total) / 2) - parseFloat(jackAmount) });
-                    debts.push({ name: 'Ste', amount: (parseFloat(total) / 2) - parseFloat(steAmount) });
+                    debts.push({ name: 'Jack', amount: parseFloat(jackDue) - parseFloat(jackAmount) });
+                    debts.push({ name: 'Ste', amount: parseFloat(steDue) - parseFloat(steAmount) });
                 }
 
                 const newExpense = {
@@ -115,6 +127,8 @@
                 setTotal(0);
                 setJackAmount(0);
                 setSteAmount(0);
+                setJackDue(0);
+                setSteDue(0);
                 setSplitMethod('equo');
             };
 
@@ -153,17 +167,6 @@
                         />
                     </div>
                     <div className="mb-4">
-                        <label className="block text-gray-700">Metodo di suddivisione</label>
-                        <select 
-                            className="mt-1 p-2 w-full border rounded"
-                            value={splitMethod}
-                            onChange={(e) => setSplitMethod(e.target.value)}
-                        >
-                            <option value="equo">Equo</option>
-                            <option value="personalizzato">Personalizzato</option>
-                        </select>
-                    </div>
-                    <div className="mb-4">
                         <label className="block text-gray-700">Jack ha messo</label>
                         <input 
                             type="number" 
@@ -183,6 +186,41 @@
                             required
                         />
                     </div>
+                    <div className="mb-4">
+                        <label className="block text-gray-700">Metodo di suddivisione</label>
+                        <select 
+                            className="mt-1 p-2 w-full border rounded"
+                            value={splitMethod}
+                            onChange={(e) => setSplitMethod(e.target.value)}
+                        >
+                            <option value="equo">Equo</option>
+                            <option value="personalizzato">Personalizzato</option>
+                        </select>
+                    </div>
+                    {splitMethod === 'personalizzato' && (
+                        <>
+                            <div className="mb-4">
+                                <label className="block text-gray-700">Jack doveva</label>
+                                <input 
+                                    type="number" 
+                                    className="mt-1 p-2 w-full border rounded"
+                                    value={jackDue}
+                                    onChange={(e) => setJackDue(e.target.value)}
+                                    required
+                                />
+                            </div>
+                            <div className="mb-4">
+                                <label className="block text-gray-700">Ste doveva</label>
+                                <input 
+                                    type="number" 
+                                    className="mt-1 p-2 w-full border rounded"
+                                    value={steDue}
+                                    onChange={(e) => setSteDue(e.target.value)}
+                                    required
+                                />
+                            </div>
+                        </>
+                    )}
                     <button 
                         type="submit" 
                         className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700"
@@ -255,10 +293,10 @@
                                         <td className="px-4 py-2 border">{expense.title}</td>
                                         <td className="px-4 py-2 border">{expense.date}</td>
                                         <td className="px-4 py-2 border">€{expense.total}</td>
-                                        <td className="px-4 py-2 border">€{expense.contributors.find(c => c.name === 'Jack').amount}</td>
-                                        <td className="px-4 py-2 border">€{expense.contributors.find(c => c.name === 'Ste').amount}</td>
-                                        <td className="px-4 py-2 border">€{expense.debts.find(d => d.name === 'Jack').amount}</td>
-                                        <td className="px-4 py-2 border">€{expense.debts.find(d => d.name === 'Ste').amount}</td>
+                                        <td className="px-4 py-2 border">€{expense.contributors.find(c => c.name === 'Jack')?.amount}</td>
+                                        <td className="px-4 py-2 border">€{expense.contributors.find(c => c.name === 'Ste')?.amount}</td>
+                                        <td className="px-4 py-2 border">€{expense.debts.find(d => d.name === 'Jack')?.amount}</td>
+                                        <td className="px-4 py-2 border">€{expense.debts.find(d => d.name === 'Ste')?.amount}</td>
                                         <td className="px-4 py-2 border">
                                             <button 
                                                 className="bg-red-500 text-white py-1 px-3 rounded hover:bg-red-700"
@@ -272,6 +310,23 @@
                             </tbody>
                         </table>
                     )}
+                </div>
+            );
+        }
+
+        function Saldo({ expenses }) {
+            const saldo = expenses.reduce((acc, expense) => {
+                const jackBalance = expense.contributors.find(c => c.name === 'Jack').amount - expense.debts.find(d => d.name === 'Jack').amount;
+                const steBalance = expense.contributors.find(c => c.name === 'Ste').amount - expense.debts.find(d => d.name === 'Ste').amount;
+                return acc + jackBalance - steBalance;
+            }, 0);
+
+            return (
+                <div className="bg-white p-4 rounded-lg shadow-md mb-6">
+                    <h2 className="text-2xl font-bold text-blue-600 mb-4">Saldo Complessivo</h2>
+                    {saldo > 0 && <p className="text-green-500">Ste deve a Jack €{Math.abs(saldo)}</p>}
+                    {saldo < 0 && <p className="text-red-500">Jack deve a Ste €{Math.abs(saldo)}</p>}
+                    {saldo === 0 && <p className="text-gray-500">Jack e Ste sono pari.</p>}
                 </div>
             );
         }
@@ -373,6 +428,7 @@
                     >
                         Logout
                     </button>
+                    <Saldo expenses={expenses} />
                     <AddExpenseForm onAddExpense={addExpense} />
                     <ExpenseHistory expenses={expenses} onDeleteExpense={deleteExpense} />
                 </div>
