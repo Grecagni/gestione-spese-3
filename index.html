@@ -68,10 +68,10 @@
                 new Chart(ctx, {
                     type: 'pie',
                     data: {
-                        labels: ['Jack', 'Ste'],
+                        labels: [], // Inserisci qui le etichette dinamiche (es. nomi degli utenti)
                         datasets: [{
-                            data: [50, 50],
-                            backgroundColor: ['#FF6384', '#36A2EB'],
+                            data: [], // Inserisci qui i dati dinamici (es. importi)
+                            backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'], // Aggiungi colori se hai più di due utenti
                         }],
                     },
                     options: {
@@ -95,15 +95,118 @@
             return <canvas id="myChart" className="my-4"></canvas>;
         }
 
+        function AddExpenseForm({ onAddExpense }) {
+            const [title, setTitle] = React.useState('');
+            const [date, setDate] = React.useState('');
+            const [jackAmount, setJackAmount] = React.useState(0);
+            const [steAmount, setSteAmount] = React.useState(0);
+            const [total, setTotal] = React.useState(0);
+            const [error, setError] = React.useState('');
+
+            const handleSubmit = (event) => {
+                event.preventDefault();
+                
+                const totalAmount = parseFloat(jackAmount) + parseFloat(steAmount);
+
+                if (totalAmount !== parseFloat(total)) {
+                    setError('La somma di Jack e Ste deve essere uguale al totale.');
+                    return;
+                }
+
+                setError('');
+                const newExpense = {
+                    title,
+                    date,
+                    total,
+                    contributors: [
+                        { name: 'Jack', amount: parseFloat(jackAmount) },
+                        { name: 'Ste', amount: parseFloat(steAmount) },
+                    ],
+                };
+
+                onAddExpense(newExpense);
+                setTitle('');
+                setDate('');
+                setJackAmount(0);
+                setSteAmount(0);
+                setTotal(0);
+            };
+
+            return (
+                <form onSubmit={handleSubmit} className="bg-white p-4 rounded-lg shadow-md mb-6">
+                    <h2 className="text-2xl font-bold text-blue-600 mb-4">Aggiungi una nuova spesa</h2>
+                    {error && <p className="text-red-500 mb-4">{error}</p>}
+                    <div className="mb-4">
+                        <label className="block text-gray-700">Titolo</label>
+                        <input 
+                            type="text" 
+                            className="mt-1 p-2 w-full border rounded"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label className="block text-gray-700">Data</label>
+                        <input 
+                            type="date" 
+                            className="mt-1 p-2 w-full border rounded"
+                            value={date}
+                            onChange={(e) => setDate(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label className="block text-gray-700">Jack ha messo</label>
+                        <input 
+                            type="number" 
+                            className="mt-1 p-2 w-full border rounded"
+                            value={jackAmount}
+                            onChange={(e) => setJackAmount(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label className="block text-gray-700">Ste ha messo</label>
+                        <input 
+                            type="number" 
+                            className="mt-1 p-2 w-full border rounded"
+                            value={steAmount}
+                            onChange={(e) => setSteAmount(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label className="block text-gray-700">Totale</label>
+                        <input 
+                            type="number" 
+                            className="mt-1 p-2 w-full border rounded"
+                            value={total}
+                            onChange={(e) => setTotal(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <button 
+                        type="submit" 
+                        className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700"
+                    >
+                        Aggiungi Spesa
+                    </button>
+                </form>
+            );
+        }
+
         function App() {
-            const expenses = [
-                { title: 'G', date: '25/08/2024', total: 100, contributors: [{ name: 'Jack', amount: 50 }, { name: 'Ste', amount: 50 }] },
-                { title: 'Prova_Jack_4', date: '24/08/2024', total: 100, contributors: [{ name: 'Jack', amount: 100 }, { name: 'Ste', amount: 0 }] },
-            ];
+            const [expenses, setExpenses] = React.useState([]); // Array per memorizzare le spese
+
+            const addExpense = (expense) => {
+                setExpenses([...expenses, expense]);
+            };
 
             return (
                 <div>
                     <h1 className="text-3xl font-bold text-center text-blue-700 my-6">Gestione Spese</h1>
+                    <AddExpenseForm onAddExpense={addExpense} />
                     <ExpensesChart />
                     {expenses.map((expense, index) => (
                         <ExpenseCard
