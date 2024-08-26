@@ -62,15 +62,30 @@
             );
         }
 
-        function ExpensesChart() {
+        function ExpensesChart({ expenses }) {
             React.useEffect(() => {
                 const ctx = document.getElementById('myChart').getContext('2d');
+                const contributors = [];
+                const totals = [];
+
+                expenses.forEach(expense => {
+                    expense.contributors.forEach(contributor => {
+                        const index = contributors.indexOf(contributor.name);
+                        if (index === -1) {
+                            contributors.push(contributor.name);
+                            totals.push(contributor.amount);
+                        } else {
+                            totals[index] += contributor.amount;
+                        }
+                    });
+                });
+
                 new Chart(ctx, {
                     type: 'pie',
                     data: {
-                        labels: [], // Inserisci qui le etichette dinamiche (es. nomi degli utenti)
+                        labels: contributors,
                         datasets: [{
-                            data: [], // Inserisci qui i dati dinamici (es. importi)
+                            data: totals,
                             backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'], // Aggiungi colori se hai più di due utenti
                         }],
                     },
@@ -90,7 +105,7 @@
                         }
                     }
                 });
-            }, []);
+            }, [expenses]);
 
             return <canvas id="myChart" className="my-4"></canvas>;
         }
@@ -101,12 +116,21 @@
             const [jackAmount, setJackAmount] = React.useState(0);
             const [steAmount, setSteAmount] = React.useState(0);
             const [total, setTotal] = React.useState(0);
+            const [splitMethod, setSplitMethod] = React.useState('equo'); // 'equo' o 'personalizzato'
             const [error, setError] = React.useState('');
 
             const handleSubmit = (event) => {
                 event.preventDefault();
                 
-                const totalAmount = parseFloat(jackAmount) + parseFloat(steAmount);
+                let totalAmount;
+                if (splitMethod === 'equo') {
+                    totalAmount = parseFloat(total);
+                    const perPerson = totalAmount / 2;
+                    setJackAmount(perPerson);
+                    setSteAmount(perPerson);
+                } else {
+                    totalAmount = parseFloat(jackAmount) + parseFloat(steAmount);
+                }
 
                 if (totalAmount !== parseFloat(total)) {
                     setError('La somma di Jack e Ste deve essere uguale al totale.');
@@ -117,7 +141,7 @@
                 const newExpense = {
                     title,
                     date,
-                    total,
+                    total: totalAmount,
                     contributors: [
                         { name: 'Jack', amount: parseFloat(jackAmount) },
                         { name: 'Ste', amount: parseFloat(steAmount) },
@@ -157,25 +181,40 @@
                         />
                     </div>
                     <div className="mb-4">
-                        <label className="block text-gray-700">Jack ha messo</label>
-                        <input 
-                            type="number" 
+                        <label className="block text-gray-700">Metodo di suddivisione</label>
+                        <select 
                             className="mt-1 p-2 w-full border rounded"
-                            value={jackAmount}
-                            onChange={(e) => setJackAmount(e.target.value)}
-                            required
-                        />
+                            value={splitMethod}
+                            onChange={(e) => setSplitMethod(e.target.value)}
+                        >
+                            <option value="equo">Equo</option>
+                            <option value="personalizzato">Personalizzato</option>
+                        </select>
                     </div>
-                    <div className="mb-4">
-                        <label className="block text-gray-700">Ste ha messo</label>
-                        <input 
-                            type="number" 
-                            className="mt-1 p-2 w-full border rounded"
-                            value={steAmount}
-                            onChange={(e) => setSteAmount(e.target.value)}
-                            required
-                        />
-                    </div>
+                    {splitMethod === 'personalizzato' && (
+                        <>
+                            <div className="mb-4">
+                                <label className="block text-gray-700">Jack ha messo</label>
+                                <input 
+                                    type="number" 
+                                    className="mt-1 p-2 w-full border rounded"
+                                    value={jackAmount}
+                                    onChange={(e) => setJackAmount(e.target.value)}
+                                    required
+                                />
+                            </div>
+                            <div className="mb-4">
+                                <label className="block text-gray-700">Ste ha messo</label>
+                                <input 
+                                    type="number" 
+                                    className="mt-1 p-2 w-full border rounded"
+                                    value={steAmount}
+                                    onChange={(e) => setSteAmount(e.target.value)}
+                                    required
+                                />
+                            </div>
+                        </>
+                    )}
                     <div className="mb-4">
                         <label className="block text-gray-700">Totale</label>
                         <input 
@@ -196,6 +235,24 @@
             );
         }
 
+        function ExpenseHistory({ expenses }) {
+            return (
+                <div className="bg-white p-4 rounded-lg shadow-md mb-6">
+                    <h2 className="text-2xl font-bold text-blue-600 mb-4">Storico delle Spese</h2>
+                    {expenses.length === 0 && <p className="text-gray-500">Nessuna spesa registrata.</p>}
+                    {expenses.map((expense, index) => (
+                        <ExpenseCard
+                            key={index}
+                            title={expense.title}
+                            date={expense.date}
+                            total={expense.total}
+                            contributors={expense.contributors}
+                        />
+                    ))}
+                </div>
+            );
+        }
+
         function App() {
             const [expenses, setExpenses] = React.useState([]); // Array per memorizzare le spese
 
@@ -207,16 +264,8 @@
                 <div>
                     <h1 className="text-3xl font-bold text-center text-blue-700 my-6">Gestione Spese</h1>
                     <AddExpenseForm onAddExpense={addExpense} />
-                    <ExpensesChart />
-                    {expenses.map((expense, index) => (
-                        <ExpenseCard
-                            key={index}
-                            title={expense.title}
-                            date={expense.date}
-                            total={expense.total}
-                            contributors={expense.contributors}
-                        />
-                    ))}
+                    <ExpensesChart expenses={expenses} />
+                    <ExpenseHistory expenses={expenses} />
                 </div>
             );
         }
