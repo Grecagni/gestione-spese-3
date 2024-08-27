@@ -109,6 +109,9 @@
                 };
 
                 onAddExpense(newExpense);
+
+                // Resetta lo stato dell'errore e i campi del form dopo l'inserimento corretto
+                setError('');
                 setTitle('');
                 setDate(new Date().toISOString().substr(0, 10));
                 setTotal(0);
