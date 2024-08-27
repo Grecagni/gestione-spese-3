@@ -50,21 +50,16 @@
 
     <!-- Codice React -->
     <script type="text/babel">
-        function ExpenseCard({ title, date, total, contributors = [], debts = [], onDelete }) {
+        function ExpenseCard({ title, date, jackAmount, steAmount, jackDue, steDue, onDelete }) {
             return (
                 <div className="bg-white p-4 rounded-lg shadow-md my-4 border-l-4 border-blue-500 custom-card">
                     <h2 className="text-2xl font-bold text-blue-600">{title}</h2>
                     <p className="text-sm text-gray-500 mb-2">{date}</p>
-                    <p className="text-lg font-semibold mb-2">Totale: <span className="text-green-500">€{total}</span></p>
                     <ul className="list-disc list-inside mb-2">
-                        {contributors.map((contributor, index) => (
-                            <li key={index} className="text-gray-700">{contributor.name} ha messo: <span className="font-semibold">€{contributor.amount}</span></li>
-                        ))}
-                    </ul>
-                    <ul className="list-disc list-inside mb-2">
-                        {debts.map((debt, index) => (
-                            <li key={index} className="text-gray-700">{debt.name} deve: <span className="font-semibold">€{debt.amount}</span></li>
-                        ))}
+                        <li className="text-gray-700">Jack ha messo: <span className="font-semibold">€{jackAmount}</span></li>
+                        <li className="text-gray-700">Ste ha messo: <span className="font-semibold">€{steAmount}</span></li>
+                        <li className="text-gray-700">Jack doveva: <span className="font-semibold">€{jackDue}</span></li>
+                        <li className="text-gray-700">Ste doveva: <span className="font-semibold">€{steDue}</span></li>
                     </ul>
                     <button 
                         className="bg-red-500 text-white py-1 px-3 rounded hover:bg-red-700 custom-button"
@@ -95,30 +90,22 @@
                     return;
                 }
 
-                if (splitMethod === 'personalizzato' && (parseFloat(jackDue) + parseFloat(steDue) !== parseFloat(total))) {
+                if (splitMethod === 'equo') {
+                    setJackDue(parseFloat(total) / 2);
+                    setSteDue(parseFloat(total) / 2);
+                } else if (parseFloat(jackDue) + parseFloat(steDue) !== parseFloat(total)) {
                     setError('La somma dovuta da Jack e Ste deve essere uguale al totale.');
                     return;
-                }
-
-                const debts = [];
-                if (splitMethod === 'equo') {
-                    const perPerson = parseFloat(total) / 2;
-                    debts.push({ name: 'Jack', amount: perPerson - parseFloat(jackAmount) });
-                    debts.push({ name: 'Ste', amount: perPerson - parseFloat(steAmount) });
-                } else {
-                    debts.push({ name: 'Jack', amount: parseFloat(jackDue) - parseFloat(jackAmount) });
-                    debts.push({ name: 'Ste', amount: parseFloat(steDue) - parseFloat(steAmount) });
                 }
 
                 const newExpense = {
                     title,
                     date,
                     total: parseFloat(total),
-                    contributors: [
-                        { name: 'Jack', amount: parseFloat(jackAmount) },
-                        { name: 'Ste', amount: parseFloat(steAmount) },
-                    ],
-                    debts,
+                    jackAmount: parseFloat(jackAmount),
+                    steAmount: parseFloat(steAmount),
+                    jackDue: parseFloat(jackDue),
+                    steDue: parseFloat(steDue),
                 };
 
                 onAddExpense(newExpense);
@@ -265,9 +252,10 @@
                                     key={index}
                                     title={expense.title}
                                     date={expense.date}
-                                    total={expense.total}
-                                    contributors={expense.contributors}
-                                    debts={expense.debts}
+                                    jackAmount={expense.jackAmount}
+                                    steAmount={expense.steAmount}
+                                    jackDue={expense.jackDue}
+                                    steDue={expense.steDue}
                                     onDelete={() => handleDelete(expense.id)}
                                 />
                             ))}
@@ -279,11 +267,10 @@
                                 <tr>
                                     <th className="px-4 py-2 border">Titolo</th>
                                     <th className="px-4 py-2 border">Data</th>
-                                    <th className="px-4 py-2 border">Totale</th>
                                     <th className="px-4 py-2 border">Jack ha messo</th>
                                     <th className="px-4 py-2 border">Ste ha messo</th>
-                                    <th className="px-4 py-2 border">Jack deve</th>
-                                    <th className="px-4 py-2 border">Ste deve</th>
+                                    <th className="px-4 py-2 border">Jack doveva</th>
+                                    <th className="px-4 py-2 border">Ste doveva</th>
                                     <th className="px-4 py-2 border">Azione</th>
                                 </tr>
                             </thead>
@@ -292,11 +279,10 @@
                                     <tr key={index}>
                                         <td className="px-4 py-2 border">{expense.title}</td>
                                         <td className="px-4 py-2 border">{expense.date}</td>
-                                        <td className="px-4 py-2 border">€{expense.total}</td>
-                                        <td className="px-4 py-2 border">€{expense.contributors.find(c => c.name === 'Jack')?.amount}</td>
-                                        <td className="px-4 py-2 border">€{expense.contributors.find(c => c.name === 'Ste')?.amount}</td>
-                                        <td className="px-4 py-2 border">€{expense.debts.find(d => d.name === 'Jack')?.amount}</td>
-                                        <td className="px-4 py-2 border">€{expense.debts.find(d => d.name === 'Ste')?.amount}</td>
+                                        <td className="px-4 py-2 border">€{expense.jackAmount}</td>
+                                        <td className="px-4 py-2 border">€{expense.steAmount}</td>
+                                        <td className="px-4 py-2 border">€{expense.jackDue}</td>
+                                        <td className="px-4 py-2 border">€{expense.steDue}</td>
                                         <td className="px-4 py-2 border">
                                             <button 
                                                 className="bg-red-500 text-white py-1 px-3 rounded hover:bg-red-700"
@@ -315,18 +301,16 @@
         }
 
         function Saldo({ expenses }) {
-            const saldo = expenses.reduce((acc, expense) => {
-                const jackBalance = expense.contributors.find(c => c.name === 'Jack').amount - expense.debts.find(d => d.name === 'Jack').amount;
-                const steBalance = expense.contributors.find(c => c.name === 'Ste').amount - expense.debts.find(d => d.name === 'Ste').amount;
-                return acc + jackBalance - steBalance;
-            }, 0);
+            const saldoJack = expenses.reduce((acc, expense) => acc + expense.jackAmount - expense.jackDue, 0);
+            const saldoSte = expenses.reduce((acc, expense) => acc + expense.steAmount - expense.steDue, 0);
+            const saldoTotale = saldoJack - saldoSte;
 
             return (
                 <div className="bg-white p-4 rounded-lg shadow-md mb-6">
                     <h2 className="text-2xl font-bold text-blue-600 mb-4">Saldo Complessivo</h2>
-                    {saldo > 0 && <p className="text-green-500">Ste deve a Jack €{Math.abs(saldo)}</p>}
-                    {saldo < 0 && <p className="text-red-500">Jack deve a Ste €{Math.abs(saldo)}</p>}
-                    {saldo === 0 && <p className="text-gray-500">Jack e Ste sono pari.</p>}
+                    {saldoTotale > 0 && <p className="text-green-500">Ste deve a Jack €{Math.abs(saldoTotale)}</p>}
+                    {saldoTotale < 0 && <p className="text-red-500">Jack deve a Ste €{Math.abs(saldoTotale)}</p>}
+                    {saldoTotale === 0 && <p className="text-gray-500">Jack e Ste sono pari.</p>}
                 </div>
             );
         }
