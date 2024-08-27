@@ -104,8 +104,8 @@
                     total: parseFloat(total),
                     jackAmount: parseFloat(jackAmount),
                     steAmount: parseFloat(steAmount),
-                    jackDue: parseFloat(jackDue),
-                    steDue: parseFloat(steDue),
+                    jackDue: splitMethod === 'equo' ? parseFloat(total) / 2 : parseFloat(jackDue),
+                    steDue: splitMethod === 'equo' ? parseFloat(total) / 2 : parseFloat(steDue),
                 };
 
                 onAddExpense(newExpense);
@@ -301,9 +301,9 @@
         }
 
         function Saldo({ expenses }) {
-            const saldoJack = expenses.reduce((acc, expense) => acc + expense.jackAmount - expense.jackDue, 0);
-            const saldoSte = expenses.reduce((acc, expense) => acc + expense.steAmount - expense.steDue, 0);
-            const saldoTotale = saldoJack - saldoSte;
+            const totaleJackMesso = expenses.reduce((acc, expense) => acc + expense.jackAmount, 0);
+            const totaleJackDovuto = expenses.reduce((acc, expense) => acc + expense.jackDue, 0);
+            const saldoTotale = totaleJackMesso - totaleJackDovuto;
 
             return (
                 <div className="bg-white p-4 rounded-lg shadow-md mb-6">
